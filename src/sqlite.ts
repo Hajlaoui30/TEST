@@ -116,16 +116,18 @@ export function getDbSingleton(): Database {
 }
 
 function codeBarresDepuisCode(code: string): string {
-  const racine = code.toUpperCase().replace(/[^A-Z0-9]/g, "").padEnd(7, "X").slice(0, 7);
-  const alphabet = "0123456789BCDFGHJKLMNPQRSTVWXZ";
+  // EAN-13 « like » : 12 chiffres dérivés du code + clé de contrôle.
+  const nettoye = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
   let h = 7;
-  for (const ch of racine) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const car = alphabet[h % 27];
-  const chiffres = String((h >>> 5) % 100000).padStart(5, "0");
-  const corps = (racine + car + chiffres).padStart(12, "0").slice(0, 12);
-  const sommes = [1, 3];
+  for (const ch of nettoye) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  // Partie A : chiffres extraits du code (7 max, complétés à zéro).
+  const chiffresDuCode = nettoye.replace(/[^0-9]/g, "").slice(0, 7).padEnd(7, "0");
+  // Partie B : 5 chiffres dérivés du hash du code complet.
+  const hash5 = String(h % 100000).padStart(5, "0");
+  const corps = (chiffresDuCode + hash5).slice(0, 12).padStart(12, "0");
+  const poids = [1, 3];
   let total = 0;
-  for (let i = 0; i < 12; i++) total += Number(corps[i]) * sommes[i % 2];
+  for (let i = 0; i < 12; i++) total += Number(corps[i]) * poids[i % 2];
   const cle = (10 - (total % 10)) % 10;
   return corps + String(cle);
 }
@@ -601,15 +603,15 @@ function upsertNomenclature(
   }
 
   // Une nomenclature par PF
-  const existante = db.prepare("SELECT id FROM nomenclatures WHERE pf_id = ?").get(pfId) as
-    | { id: number }
-    | undefined;
+  const existante = db
+    .prepare("SELECT id, pf_id FROM nomenclatures WHERE pf_id = ?")
+    .get(pfId) as { id: number; pf_id: number } | undefined;
 
+  let nomenId: number;
   db.exec("BEGIN");
   try {
-    let nomenId: number;
     if (existante) {
-      if (pfIdFixe !== null && pfIdFixe !== existante.id) {
+      if (pfIdFixe !== null && pfIdFixe !== existante.pf_id) {
         // mise à jour d'une autre nomenclature que celle du PF : incohérence
         db.exec("ROLLBACK");
         fail("Incohérence : cette nomenclature ne correspond pas à ce PF.");
@@ -627,7 +629,11 @@ function upsertNomenclature(
     for (const [mpId, pct] of parMp) ins.run(nomenId, mpId, pct);
     db.exec("COMMIT");
   } catch (e) {
-    db.exec("ROLLBACK");
+    try {
+      db.exec("ROLLBACK");
+    } catch {
+      /* pas de transaction active : rien à annuler */
+    }
     throw e;
   }
   return detailNomenclature(nomenId)!;
