@@ -72,7 +72,9 @@ function RootComponent() {
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col bg-slate-50">
-          <main className="mx-auto w-full max-w-6xl flex-1 px-8 py-8">{children}</main>
+          <main className="mx-auto w-full max-w-6xl flex-1 px-8 py-8">
+            <Outlet />
+          </main>
           <footer className="border-t border-slate-200 px-8 py-3 text-center text-xs text-slate-400">
             FluxProd — GPAO web en français
           </footer>
