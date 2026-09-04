@@ -12,7 +12,7 @@
 import { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { LABELS_EMP } from "./labels";
+import { LIBELLES_EMPLACEMENT as LABELS_EMP } from "./labels";
 
 export const TYPE_RECEPTION = "RECEPTION";
 export const TYPE_STOCKAGE_MP = "STOCKAGE_MP";
@@ -28,16 +28,6 @@ export const TYPES_AUTORISES_MP = [
   TYPE_SOUS_ENSEMBLE,
 ];
 export const TYPES_AUTORISES_PF = [TYPE_STOCKAGE_PF, TYPE_TRAITEMENT_FINITION];
-
-const LABELS_EMP: Record<string, string> = {
-  RECEPTION: "Zone de Réception",
-  STOCKAGE_MP: "Stockage MP",
-  DOSAGE_PREPARATION: "Dosage/Préparation MP",
-  SOUS_ENSEMBLE: "Sous-ensemble/Prémix",
-  AJOUT_MANUEL: "Zone d'Ajout Manuel",
-  TRAITEMENT_FINITION: "Traitement/Finition",
-  STOCKAGE_PF: "Stockage PF",
-};
 
 let db: Database | null = null;
 
